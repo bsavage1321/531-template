@@ -25,8 +25,8 @@ button.x{min-height:36px;width:36px;padding:0;color:var(--mut)}
 .set .w{font-weight:700;min-width:84px;font-size:18px}
 .set button{margin-left:auto}
 input[type=checkbox]{width:26px;height:26px;accent-color:var(--ac);flex:none}
-.acc{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--bd)}
-.acc:first-of-type{border-top:0}.dots{display:flex;gap:8px}
+.acc{padding:8px 0;border-top:1px solid var(--bd)}.ah{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}.aw{flex:0 0 96px}
+.acc:first-of-type{border-top:0}.dots{display:flex;flex-wrap:wrap;gap:8px}
 input:not([type=checkbox]),select{font:inherit;width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)}
 .row{display:flex;gap:8px;align-items:center;margin:6px 0}.row>*{flex:1}.row>.n{flex:0 0 76px}.row>.x{flex:0 0 36px}
 label.f{display:block;font-size:13px;color:var(--mut)}
@@ -94,7 +94,7 @@ function vWork(){
    h+=`<label class="set"><input type="checkbox" data-a="chk" data-k="${k}" ${S.done[k]?'checked':''}><span class="w">${w} ${S.unit}</span><span>× ${s[1]}${last?'+':''}</span><span class="mut">${s[0]}%</span>${last?`<button class="sm" data-a="amrap" data-l="${id}" data-w="${w}">Log reps</button>`:''}</label>`});
   h+='</section>'});
  if(d.acc.length){h+='<section class="card"><h2>Accessories</h2>';
-  d.acc.forEach((a,i)=>{h+=`<div class="acc"><div>${esc(a.n)} <span class="mut">${a.s} × ${a.r}</span></div><div class="dots">${Array.from({length:a.s},(_,j)=>{const k=`${S.week}.${S.day}.a${i}.${j}`;return `<input type="checkbox" data-a="chk" data-k="${k}" ${S.done[k]?'checked':''}>`}).join('')}</div></div>`});
+  d.acc.forEach((a,i)=>{h+=`<div class="acc"><div class="ah"><div>${esc(a.n)} <span class="mut">${a.s} × ${a.r}</span></div><div class="aw"><input type="number" inputmode="decimal" step="any" placeholder="${S.unit}" aria-label="Weight for ${esc(a.n)}" data-a="set" data-p="days.${S.day}.acc.${i}.w" data-t="n" value="${a.w||''}"></div></div><div class="dots">${Array.from({length:a.s},(_,j)=>{const k=`${S.week}.${S.day}.a${i}.${j}`;return `<input type="checkbox" data-a="chk" data-k="${k}" ${S.done[k]?'checked':''}>`}).join('')}</div></div>`});
   h+='</section>'}
  return h+'<button class="ghost" data-a="clear">Clear checkmarks for this day</button>'}
 
@@ -139,8 +139,8 @@ function vPlan(){
  h+='</section><section class="card"><h2>Days</h2>';
  S.days.forEach((d,i)=>{h+=`<h3>${esc(d.n)}</h3>${inp(`days.${i}.n`,d.n)}<label class="f" style="margin-top:8px">Main lifts</label>`;
   d.main.forEach((m,j)=>{h+=`<div class="row">${liftSel(`days.${i}.main.${j}`,m)}<button class="x" data-a="del" data-p="days.${i}.main" data-i="${j}">✕</button></div>`});
-  h+=`<button class="sm" data-a="add" data-p="days.${i}.main" data-k="main">+ Main lift</button><label class="f" style="margin-top:8px">Accessories (name · sets · reps)</label>`;
-  d.acc.forEach((a,j)=>{h+=`<div class="row">${inp(`days.${i}.acc.${j}.n`,a.n)}<div class="n">${inp(`days.${i}.acc.${j}.s`,a.s,'n')}</div><div class="n">${inp(`days.${i}.acc.${j}.r`,a.r,'n')}</div><button class="x" data-a="del" data-p="days.${i}.acc" data-i="${j}">✕</button></div>`});
+  h+=`<button class="sm" data-a="add" data-p="days.${i}.main" data-k="main">+ Main lift</button><label class="f" style="margin-top:8px">Accessories (name, sets, reps, weight)</label>`;
+  d.acc.forEach((a,j)=>{h+=`<div class="row" style="margin-top:12px">${inp(`days.${i}.acc.${j}.n`,a.n)}<button class="x" data-a="del" data-p="days.${i}.acc" data-i="${j}">✕</button></div><div class="row"><div><label class="f">Sets</label>${inp(`days.${i}.acc.${j}.s`,a.s,'n')}</div><div><label class="f">Reps</label>${inp(`days.${i}.acc.${j}.r`,a.r,'n')}</div><div><label class="f">Weight (${S.unit})</label>${inp(`days.${i}.acc.${j}.w`,a.w||'','n')}</div></div>`});
   h+=`<button class="sm" data-a="add" data-p="days.${i}.acc" data-k="acc">+ Accessory</button>`});
  h+=`</section><section class="card"><h2>Settings</h2>
  <div class="row"><div><label class="f">Unit</label>${inp('unit',S.unit)}</div><div><label class="f">Round to</label>${inp('round',S.round,'n')}</div><div><label class="f">TM % of 1RM</label>${inp('tmPct',S.tmPct,'n')}</div></div>

@@ -70,7 +70,7 @@ const inp=(p,v,t,c)=>`<input class="${c||''}" data-a="set" data-p="${p}" data-t=
 let tmr;
 function save(){S.ts=Date.now();clearTimeout(tmr);tmr=setTimeout(()=>{
  const j=JSON.stringify(S);try{localStorage.setItem('t531',j)}catch(e){}
- if(docRef)docRef.set({json:j}).catch(()=>{});},500)}
+ if(docRef)docRef.set({json:j}).catch(()=>{});push();},500)}
 function adopt(o){if(!o)return;try{const n=Object.assign(def(),o);if(n.ts>=S.ts){S=n;render()}}catch(e){}}
 try{adopt(JSON.parse(localStorage.getItem('t531')))}catch(e){}
 (async()=>{try{
@@ -81,6 +81,29 @@ try{adopt(JSON.parse(localStorage.getItem('t531')))}catch(e){}
  const snap=await Promise.race([docRef.get(),new Promise((_,r)=>setTimeout(r,10000))]);
  if(snap.exists&&snap.data().json)adopt(JSON.parse(snap.data().json));
 }catch(e){}})();
+
+/* Google Sheet sync (Apps Script web app) */
+let SY={url:'',key:''},syMsg='';
+try{Object.assign(SY,JSON.parse(localStorage.getItem('s531')))}catch(e){}
+function store(){try{localStorage.setItem('t531',JSON.stringify(S))}catch(e){}}
+function syShow(){const el=$('#sy');if(el)el.textContent=syMsg}
+function take(d){S=Object.assign(def(),JSON.parse(d.json));S.ts=d.ts;store();render()}
+async function pull(){if(!SY.url)return;try{
+ const r=await fetch(SY.url+(SY.url.includes('?')?'&':'?')+'key='+encodeURIComponent(SY.key));
+ const d=await r.json();
+ if(d.error)syMsg='Sync error: '+d.error;
+ else if(d.ts>S.ts&&d.json){take(d);syMsg='Loaded newer data from sheet'}
+ else syMsg='Up to date';
+}catch(e){syMsg='Sync failed. Check the URL.'}syShow()}
+async function push(){if(!SY.url)return;try{
+ const r=await fetch(SY.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:SY.key,ts:S.ts,state:S})});
+ const d=await r.json();
+ if(d.error)syMsg='Sync error: '+d.error;
+ else if(d.stale&&d.json){take(d);syMsg='Loaded newer data from sheet'}
+ else syMsg='Saved to sheet '+new Date().toLocaleTimeString();
+}catch(e){syMsg='Sync failed. Will retry on next change.'}syShow()}
+const syncCard=()=>`<section class="card"><h2>Google Sheet sync</h2><p class="mut">Paste your Apps Script web app URL and key to share data across devices and write it to your sheet.</p><label class="f">Web app URL</label><input data-a="sy" data-f="url" value="${esc(SY.url)}" placeholder="https://script.google.com/macros/s/…/exec"><label class="f" style="margin-top:8px">Key</label><input data-a="sy" data-f="key" value="${esc(SY.key)}"><div class="row"><button data-a="syncnow">Sync now</button></div><p class="mut" id="sy">${esc(syMsg)}</p></section>`;
+pull();
 
 /* views */
 function vWork(){
@@ -142,7 +165,7 @@ function vPlan(){
   h+=`<button class="sm" data-a="add" data-p="days.${i}.main" data-k="main">+ Main lift</button><label class="f" style="margin-top:8px">Accessories (name, sets, reps, weight)</label>`;
   d.acc.forEach((a,j)=>{h+=`<div class="row" style="margin-top:12px">${inp(`days.${i}.acc.${j}.n`,a.n)}<button class="x" data-a="del" data-p="days.${i}.acc" data-i="${j}">✕</button></div><div class="row"><div><label class="f">Sets</label>${inp(`days.${i}.acc.${j}.s`,a.s,'n')}</div><div><label class="f">Reps</label>${inp(`days.${i}.acc.${j}.r`,a.r,'n')}</div><div><label class="f">Weight (${S.unit})</label>${inp(`days.${i}.acc.${j}.w`,a.w||'','n')}</div></div>`});
   h+=`<button class="sm" data-a="add" data-p="days.${i}.acc" data-k="acc">+ Accessory</button>`});
- h+=`</section><section class="card"><h2>Settings</h2>
+ h+=`</section>${syncCard()}<section class="card"><h2>Settings</h2>
  <div class="row"><div><label class="f">Unit</label>${inp('unit',S.unit)}</div><div><label class="f">Round to</label>${inp('round',S.round,'n')}</div><div><label class="f">TM % of 1RM</label>${inp('tmPct',S.tmPct,'n')}</div></div>
  <label class="f">1RM formula</label><select data-a="set" data-p="formula"><option value="epley" ${S.formula==='epley'?'selected':''}>Epley (weight × (1 + reps/30))</option><option value="brzycki" ${S.formula==='brzycki'?'selected':''}>Brzycki (weight × 36 / (37 − reps))</option></select></section>`;
  return h}
@@ -170,7 +193,10 @@ const H={
  settm:t=>{S.lifts[t.dataset.l].tm=Math.round(+t.dataset.e*S.tmPct/100/S.round)*S.round;msg='Training max updated.'},
  cycle:()=>{if(!arm){arm=true;return}Object.values(S.lifts).forEach(l=>l.tm+=l.inc);S.week=0;S.done={};arm=false}
 };
-function run(t,ev){const f=H[t.dataset.a];if(!f)return;if(f(t)!==0)render();save()}
+H.sy=t=>{SY[t.dataset.f]=t.value.trim();try{localStorage.setItem('s531',JSON.stringify(SY))}catch(e){}pull();return 0};
+H.syncnow=()=>{pull().then(()=>push());return 0};
+const NOSYNC=new Set(['tab','wk','day','amrap','sy','syncnow']);
+function run(t){const a=t.dataset.a,f=H[a];if(!f)return;if(f(t)!==0)render();NOSYNC.has(a)?store():save()}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&t.tagName==='BUTTON')run(t)});
 document.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.a&&t.tagName!=='BUTTON')run(t);
  else if(t.id==='rw'||t.id==='rr'){S.rm.w=$('#rw').value;S.rm.r=$('#rr').value}});
